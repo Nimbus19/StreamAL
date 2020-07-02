@@ -93,3 +93,19 @@ uint64_t RingBuffer::Scatter(uint64_t index, const void* data, size_t dataSize)
     return dataSize;
 }
 //------------------------------------------------------------------------------
+char* RingBuffer::Address(uint64_t index, size_t* size)
+{
+    RingBuffer& thiz = (*this);
+
+    uint64_t offset = index % thiz.bufferSize;
+    if (size)
+    {
+        if ((*size) > thiz.bufferSize - offset)
+        {
+            (*size) = thiz.bufferSize - offset;
+        }
+    }
+
+    return thiz.buffer + offset;
+}
+//------------------------------------------------------------------------------

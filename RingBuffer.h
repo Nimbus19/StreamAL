@@ -22,4 +22,6 @@ struct RingBuffer
 
     uint64_t Gather(uint64_t index, void* data, size_t dataSize, bool clear);
     uint64_t Scatter(uint64_t index, const void* data, size_t dataSize);
+
+    char* Address(uint64_t index, size_t* size);
 };
