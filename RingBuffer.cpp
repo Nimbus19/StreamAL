@@ -2,7 +2,7 @@
 // RingBuffer
 //
 // Copyright (c) 2020 TAiGA
-// https://github.com/metarutaiga/RingBuffer
+// https://github.com/metarutaiga/StreamAL
 //==============================================================================
 #include <memory>
 #include "RingBuffer.h"

@@ -2,7 +2,7 @@
 // Android OpenSL ES Wrapper
 //
 // Copyright (c) 2020 TAiGA
-// https://github.com/metarutaiga/AOpenSLES
+// https://github.com/metarutaiga/StreamAL
 //==============================================================================
 #include <dlfcn.h>
 #include <malloc.h>
@@ -327,13 +327,13 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
     return nullptr;
 }
 //------------------------------------------------------------------------------
-void AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
+uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
 {
     if (openSLES == nullptr)
-        return;
+        return 0;
     AOpenSLES& thiz = (*openSLES);
     if (thiz.record)
-        return;
+        return 0;
 
     uint64_t queueOffset = timestamp * thiz.bytesPerSecond / 1000000;
 
@@ -361,6 +361,7 @@ void AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const void* 
     }
 
     thiz.sync = sync;
+    return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
 size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferSize, bool drop)

@@ -2,7 +2,7 @@
 // iOS AudioUnit Wrapper
 //
 // Copyright (c) 2020 TAiGA
-// https://github.com/metarutaiga/iAudioUnit
+// https://github.com/metarutaiga/StreamAL
 //==============================================================================
 #include <stdio.h>
 #if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64)
@@ -282,6 +282,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
                                      sizeof(outputFormat)) != noErr)
                 break;
 
+#if TARGET_OS_IPHONE
             UInt32 enable = 1;
             if (AudioUnitSetProperty(thiz.instance,
                                      kAudioOutputUnitProperty_EnableIO,
@@ -290,6 +291,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
                                      &enable,
                                      sizeof(enable)) != noErr)
                 break;
+#endif
 
             AURenderCallbackStruct callbackStruct = { playerCallback, audioUnit };
             if (AudioUnitSetProperty(thiz.instance,
@@ -324,13 +326,13 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
     return nullptr;
 }
 //------------------------------------------------------------------------------
-void iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
+uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
 {
     if (audioUnit == nullptr)
-        return;
+        return 0;
     iAudioUnit& thiz = (*audioUnit);
     if (thiz.record)
-        return;
+        return 0;
 
     uint64_t queueOffset = timestamp * thiz.bytesPerSecond / 1000000;
 
@@ -358,6 +360,7 @@ void iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const voi
     }
 
     thiz.sync = sync;
+    return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
 size_t iAudioUnitDequeue(struct iAudioUnit* audioUnit, void* buffer, size_t bufferSize, bool drop)

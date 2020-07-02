@@ -2,7 +2,7 @@
 // Android OpenSL ES Wrapper
 //
 // Copyright (c) 2020 TAiGA
-// https://github.com/metarutaiga/AOpenSLES
+// https://github.com/metarutaiga/StreamAL
 //==============================================================================
 #pragma once
 
@@ -30,7 +30,7 @@ extern SLInterfaceID AOpenSLES_SL_IID_VOLUME;
 // OpenSL ES Utility
 //==============================================================================
 struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuffer, bool record = false);
-void AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
+uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
 size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferSize, bool drop = false);
 void AOpenSLESPlay(struct AOpenSLES* openSLES);
 void AOpenSLESStop(struct AOpenSLES* openSLES);

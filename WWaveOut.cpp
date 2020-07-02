@@ -2,7 +2,7 @@
 // Windows WaveOut Wrapper
 //
 // Copyright (c) 2020 TAiGA
-// https://github.com/metarutaiga/WWaveOut
+// https://github.com/metarutaiga/StreamAL
 //==============================================================================
 #include <stdlib.h>
 #define NOMINMAX
@@ -172,7 +172,7 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
     delete& thiz;
 }
 //------------------------------------------------------------------------------
-void WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
+uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
 {
     if (waveOut == nullptr)
         return;
@@ -203,5 +203,6 @@ void WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void* buf
     thiz.bufferSize = bufferSize;
     thiz.sync = sync;
     ReleaseSemaphore(thiz.semaphore, 1, nullptr);
+    return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
