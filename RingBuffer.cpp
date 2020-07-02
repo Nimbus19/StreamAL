@@ -8,12 +8,8 @@
 #include "RingBuffer.h"
 
 //------------------------------------------------------------------------------
-RingBuffer::RingBuffer()
+RingBuffer::RingBuffer() : buffer(nullptr), bufferSize(0)
 {
-    RingBuffer& thiz = (*this);
-
-    thiz.buffer = nullptr;
-    thiz.bufferSize = 0;
 }
 //------------------------------------------------------------------------------
 RingBuffer::~RingBuffer()
@@ -47,6 +43,8 @@ uint64_t RingBuffer::Gather(uint64_t index, void* data, size_t dataSize, bool cl
 {
     RingBuffer& thiz = (*this);
 
+    if (thiz.bufferSize == 0)
+        return 0;
     uint64_t offset = index % thiz.bufferSize;
     uint64_t size = dataSize;
     if (size > thiz.bufferSize - offset)
@@ -76,6 +74,8 @@ uint64_t RingBuffer::Scatter(uint64_t index, const void* data, size_t dataSize)
 {
     RingBuffer& thiz = (*this);
 
+    if (thiz.bufferSize == 0)
+        return 0;
     uint64_t offset = index % thiz.bufferSize;
     uint64_t size = dataSize;
     if (size > thiz.bufferSize - offset)
@@ -96,6 +96,15 @@ uint64_t RingBuffer::Scatter(uint64_t index, const void* data, size_t dataSize)
 char* RingBuffer::Address(uint64_t index, size_t* size)
 {
     RingBuffer& thiz = (*this);
+
+    if (thiz.bufferSize == 0)
+    {
+        if (size)
+        {
+            (*size) = 0;
+        }
+        return nullptr;
+    }
 
     uint64_t offset = index % thiz.bufferSize;
     if (size)
