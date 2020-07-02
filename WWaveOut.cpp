@@ -5,7 +5,7 @@
 // https://github.com/metarutaiga/StreamAL
 //==============================================================================
 #include <stdlib.h>
-#define NOMINMAX
+#include <math.h>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <mmeapi.h>
@@ -28,13 +28,40 @@ struct WWaveOut
     uint32_t sampleRate;
     uint32_t bytesPerSecond;
 
+    float volume;
+
+    bool cancel;
     bool sync;
+    bool record;
 
     int bufferSize;
     HANDLE thread;
     HANDLE semaphore;
-    bool threadCancel;
 };
+//------------------------------------------------------------------------------
+static void scaleWaveform(int16_t* waveform, size_t count, float scale)
+{
+    if (scale == 1.0f)
+        return;
+
+#if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64)
+    float32x4_t vScale = vdupq_n_f32(scale);
+    for (size_t i = 0, size = count / sizeof(short); i < size; i += 4)
+    {
+        int32x4_t s32 = vmovl_s16(vld1_s16(waveform + i));
+        float32x4_t f32 = vcvtq_f32_s32(s32);
+        f32 = vmulq_f32(f32, vScale);
+        s32 = vcvtq_s32_f32(f32);
+        vst1_s16(waveform + i, vqmovn_s32(s32));
+    }
+#else
+    for (size_t i = 0, size = count / sizeof(short); i < size; ++i)
+    {
+        float scaled = waveform[i] * scale;
+        waveform[i] = min(max(scaled, SHRT_MIN), SHRT_MAX);
+    }
+#endif
+}
 //------------------------------------------------------------------------------
 DWORD WINAPI WWaveOutThread(LPVOID arg)
 {
@@ -44,10 +71,10 @@ DWORD WINAPI WWaveOutThread(LPVOID arg)
 
     while (thiz.waveOut)
     {
-        if (thiz.threadCancel)
+        if (thiz.cancel)
             break;
         WaitForSingleObject(thiz.semaphore, INFINITE);
-        if (thiz.threadCancel)
+        if (thiz.cancel)
             break;
 
         thiz.waveHeaderIndex++;
@@ -64,6 +91,7 @@ DWORD WINAPI WWaveOutThread(LPVOID arg)
 
         size_t outputSize = thiz.bufferSize;
         short* output = (short*)thiz.bufferQueue.Address(thiz.bufferQueuePick, &outputSize);
+        scaleWaveform(output, outputSize, thiz.volume);
 
         thiz.waveHeader[thiz.waveHeaderIndex].lpData = (LPSTR)output;
         thiz.waveHeader[thiz.waveHeaderIndex].dwBufferLength = outputSize;
@@ -120,10 +148,6 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         if (waveOutOpen(nullptr, WAVE_MAPPER, &thiz.waveFormat, 0, 0, WAVE_FORMAT_QUERY) != MMSYSERR_NOERROR)
             break;
 
-        thiz.channel = channel;
-        thiz.sampleRate = sampleRate;
-        thiz.bytesPerSecond = sampleRate * sizeof(int16_t) * channel;
-
         thiz.semaphore = CreateSemaphoreA(nullptr, 0, 1, "WWaveOut");
         if (thiz.semaphore == nullptr)
             break;
@@ -131,6 +155,12 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
         if (thiz.thread == nullptr)
             break;
+
+        thiz.channel = channel;
+        thiz.sampleRate = sampleRate;
+        thiz.bytesPerSecond = sampleRate * sizeof(int16_t) * channel;
+        thiz.volume = 1.0f;
+        thiz.record = record;
 
         return waveOut;
     }
@@ -147,7 +177,7 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
 
     if (thiz.thread)
     {
-        thiz.threadCancel = true;
+        thiz.cancel = true;
         ReleaseSemaphore(thiz.semaphore, 1, nullptr);
         WaitForSingleObject(thiz.thread, INFINITE);
         CloseHandle(thiz.thread);
@@ -188,5 +218,14 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void*
     thiz.sync = sync;
     ReleaseSemaphore(thiz.semaphore, 1, nullptr);
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
+}
+//------------------------------------------------------------------------------
+void WWaveOutVolume(struct WWaveOut* waveOut, float volume)
+{
+    if (waveOut == nullptr)
+        return;
+    WWaveOut& thiz = (*waveOut);
+
+    thiz.volume = volume;
 }
 //------------------------------------------------------------------------------

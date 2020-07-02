@@ -59,7 +59,8 @@ static void scaleWaveform(int16_t* waveform, size_t count, float scale)
 #else
     for (size_t i = 0, size = count / sizeof(short); i < size; ++i)
     {
-        waveform[i] = fminf(fmaxf(waveform[i] * scale, SHRT_MIN), SHRT_MAX);
+        float scaled = waveform[i] * scale;
+        waveform[i] = fminf(fmaxf(scaled, SHRT_MIN), SHRT_MAX);
     }
 #endif
 }
