@@ -9,12 +9,10 @@
 #include <memory.h>
 #include <math.h>
 #include <android/log.h>
-#if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64)
-#   include <arm_neon.h>
-#endif
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
 #include "RingBuffer.h"
+#include "Waveform.h"
 #include "AOpenSLES.h"
 
 //==============================================================================
@@ -118,30 +116,6 @@ struct AOpenSLES
 
     short temp[4096];
 };
-//------------------------------------------------------------------------------
-static void scaleWaveform(int16_t* waveform, size_t count, float scale)
-{
-    if (scale == 1.0f)
-        return;
-
-#if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64)
-    float32x4_t vScale = vdupq_n_f32(scale);
-    for (size_t i = 0, size = count / sizeof(short); i < size; i += 4)
-    {
-        int32x4_t s32 = vmovl_s16(vld1_s16(waveform + i));
-        float32x4_t f32 = vcvtq_f32_s32(s32);
-        f32 = vmulq_f32(f32, vScale);
-        s32 = vcvtq_s32_f32(f32);
-        vst1_s16(waveform + i, vqmovn_s32(s32));
-    }
-#else
-    for (size_t i = 0, size = count / sizeof(short); i < size; ++i)
-    {
-        float scaled = waveform[i] * scale;
-        waveform[i] = fminf(fmaxf(scaled, SHRT_MIN), SHRT_MAX);
-    }
-#endif
-}
 //------------------------------------------------------------------------------
 static void playerCallback(SLAndroidSimpleBufferQueueItf, void* context)
 {
