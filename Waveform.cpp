@@ -33,13 +33,13 @@ void scaleWaveform(int16_t* waveform, size_t count, float scale)
     __m128 vScale = _mm_set1_ps(scale);
     for (size_t i = 0, size = count / sizeof(short); i < size; i += 4)
     {
-        __m128i s16 = _mm_loadl_pi(__m128(), (__m64*)(waveform + i));
+        __m128i s16 = _mm_loadu_si64(waveform + i);
         __m128i s32 = _mm_srai_epi32(_mm_unpacklo_epi16(s16, s16), 16);
         __m128 f32 = _mm_cvtepi32_ps(s32);
         f32 = _mm_mul_ps(f32, vScale);
         s32 = _mm_cvtps_epi32(f32);
         s16 = _mm_packs_epi32(s32, s32);
-        _mm_storel_pi((__m64*)(waveform + i), s16);
+        _mm_storeu_si64(waveform + i, s16);
     }
 #else
     for (size_t i = 0, size = count / sizeof(short); i < size; ++i)
