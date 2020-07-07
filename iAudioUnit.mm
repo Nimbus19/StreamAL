@@ -39,12 +39,12 @@ struct iAudioUnit
     bool record;
 };
 //------------------------------------------------------------------------------
-auto playerCallback(void* inRefCon,
-                    AudioUnitRenderActionFlags* ioActionFlags,
-                    const AudioTimeStamp* inTimeStamp,
-                    UInt32 inBusNumber,
-                    UInt32 inNumberFrames,
-                    AudioBufferList* ioData) -> OSStatus
+static OSStatus playerCallback(void* inRefCon,
+                               AudioUnitRenderActionFlags* ioActionFlags,
+                               const AudioTimeStamp* inTimeStamp,
+                               UInt32 inBusNumber,
+                               UInt32 inNumberFrames,
+                               AudioBufferList* ioData)
 {
     iAudioUnit& thiz = *(iAudioUnit*)inRefCon;
 
@@ -70,12 +70,12 @@ auto playerCallback(void* inRefCon,
     return noErr;
 };
 //------------------------------------------------------------------------------
-auto recorderCallback(void* inRefCon,
-                      AudioUnitRenderActionFlags* ioActionFlags,
-                      const AudioTimeStamp* inTimeStamp,
-                      UInt32 inBusNumber,
-                      UInt32 inNumberFrames,
-                      AudioBufferList* ioData) -> OSStatus
+static OSStatus recorderCallback(void* inRefCon,
+                                 AudioUnitRenderActionFlags* ioActionFlags,
+                                 const AudioTimeStamp* inTimeStamp,
+                                 UInt32 inBusNumber,
+                                 UInt32 inNumberFrames,
+                                 AudioBufferList* ioData)
 {
     iAudioUnit& thiz = *(iAudioUnit*)inRefCon;
 
@@ -106,12 +106,12 @@ auto recorderCallback(void* inRefCon,
     return noErr;
 }
 //------------------------------------------------------------------------------
-auto dummyCallback(void* inRefCon,
-                   AudioUnitRenderActionFlags* ioActionFlags,
-                   const AudioTimeStamp* inTimeStamp,
-                   UInt32 inBusNumber,
-                   UInt32 inNumberFrames,
-                   AudioBufferList* ioData) -> OSStatus
+static OSStatus dummyCallback(void* inRefCon,
+                              AudioUnitRenderActionFlags* ioActionFlags,
+                              const AudioTimeStamp* inTimeStamp,
+                              UInt32 inBusNumber,
+                              UInt32 inNumberFrames,
+                              AudioBufferList* ioData)
 {
     return noErr;
 }
