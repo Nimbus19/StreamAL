@@ -9,6 +9,7 @@
 #elif defined(_M_IX86) || defined(_M_AMD64) || defined(__i386__) || defined(__amd64__)
 #   include <immintrin.h>
 #endif
+#include <string>
 #include "Waveform.h"
 
 //------------------------------------------------------------------------------
@@ -16,10 +17,15 @@ void scaleWaveform(int16_t* waveform, size_t count, float scale)
 {
     if (scale == 1.0f)
         return;
+    if (scale <= 0.0f)
+    {
+        memset(waveform, 0, count);
+        return;
+    }
 
 #if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64)
     float32x4_t vScale = vdupq_n_f32(scale);
-    for (size_t i = 0, size = count / sizeof(short); i < size; i += 4)
+    for (size_t i = 0, size = count / sizeof(int16_t); i < size; i += 4)
     {
         int16x4_t s16 = vld1_s16(waveform + i);
         int32x4_t s32 = vmovl_s16(s16);
@@ -31,7 +37,7 @@ void scaleWaveform(int16_t* waveform, size_t count, float scale)
     }
 #elif defined(_M_IX86) || defined(_M_AMD64) || defined(__i386__) || defined(__amd64__)
     __m128 vScale = _mm_set1_ps(scale);
-    for (size_t i = 0, size = count / sizeof(short); i < size; i += 4)
+    for (size_t i = 0, size = count / sizeof(int16_t); i < size; i += 4)
     {
         __m128i s16 = _mm_loadu_si64(waveform + i);
         __m128i s32 = _mm_srai_epi32(_mm_unpacklo_epi16(s16, s16), 16);
@@ -42,7 +48,7 @@ void scaleWaveform(int16_t* waveform, size_t count, float scale)
         _mm_storeu_si64(waveform + i, s16);
     }
 #else
-    for (size_t i = 0, size = count / sizeof(short); i < size; ++i)
+    for (size_t i = 0, size = count / sizeof(int16_t); i < size; ++i)
     {
         float scaled = waveform[i] * scale;
         waveform[i] = fminf(fmaxf(scaled, SHRT_MIN), SHRT_MAX);

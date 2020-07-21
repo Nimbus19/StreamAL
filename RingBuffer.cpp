@@ -21,6 +21,7 @@ bool RingBuffer::Startup(size_t size)
 {
     RingBuffer& thiz = (*this);
 
+    thiz.bufferSize = 0;
     thiz.buffer = (char*)realloc(thiz.buffer, size);
     if (thiz.buffer == nullptr)
         return false;
