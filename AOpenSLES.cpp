@@ -326,7 +326,7 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const vo
             thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
     }
 
-    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(queueOffset, buffer, bufferSize);
+    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
     if (thiz.ready == false)
     {

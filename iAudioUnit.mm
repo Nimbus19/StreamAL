@@ -325,7 +325,7 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const
             thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
     }
 
-    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(queueOffset, buffer, bufferSize);
+    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
     if (thiz.ready == false)
     {

@@ -189,7 +189,7 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void*
             thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
     }
 
-    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(queueOffset, buffer, bufferSize);
+    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
     thiz.bufferSize = bufferSize;
     thiz.sync = sync;
