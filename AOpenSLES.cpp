@@ -8,6 +8,7 @@
 #include <malloc.h>
 #include <memory.h>
 #include <math.h>
+#include <new>
 #include <android/log.h>
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -170,9 +171,16 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
         if (sampleRate == 0)
             break;
 
+#if defined(__llvm__)
+        openSLES = (AOpenSLES*)malloc(sizeof(AOpenSLES));
+        if (openSLES == nullptr)
+            break;
+        openSLES = new (openSLES) AOpenSLES{};
+#else
         openSLES = new AOpenSLES{};
         if (openSLES == nullptr)
             break;
+#endif
         AOpenSLES& thiz = (*openSLES);
 
         if (thiz.bufferQueue.Startup(sampleRate * sizeof(int16_t) * channel * secondPerBuffer) == false)
@@ -475,6 +483,11 @@ void AOpenSLESDestroy(struct AOpenSLES* openSLES)
         thiz.engineObject = nullptr;
     }
 
+#if defined(__llvm__)
+    thiz.~AOpenSLES();
+    free(openSLES);
+#else
     delete openSLES;
+#endif
 }
 //------------------------------------------------------------------------------

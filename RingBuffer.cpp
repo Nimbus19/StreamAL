@@ -4,7 +4,8 @@
 // Copyright (c) 2020 TAiGA
 // https://github.com/metarutaiga/StreamAL
 //==============================================================================
-#include <memory>
+#include <stdlib.h>
+#include <string.h>
 #include "RingBuffer.h"
 
 //------------------------------------------------------------------------------
