@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #define WIN32_LEAN_AND_MEAN
+#pragma comment(lib, "winmm.lib")
 #include <Windows.h>
 #include <mmeapi.h>
 #include "RingBuffer.h"
