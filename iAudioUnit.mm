@@ -36,6 +36,8 @@ struct iAudioUnit
     bool cancel;
     bool ready;
     bool sync;
+    bool syncSend;
+    bool syncPick;
     bool record;
 };
 //------------------------------------------------------------------------------
@@ -52,10 +54,13 @@ static OSStatus playerCallback(void* inRefCon,
     {
         if (thiz.sync)
         {
-            if (thiz.bufferQueuePick < thiz.bufferQueueSend - thiz.bytesPerSecond / 2)
+            if (thiz.syncPick == false)
+                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
+            else if (thiz.bufferQueuePick < thiz.bufferQueueSend - thiz.bytesPerSecond / 2)
                 thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
             else if (thiz.bufferQueuePick > thiz.bufferQueueSend)
                 thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
+            thiz.syncPick = true;
         }
 
         short* output = (short*)ioData->mBuffers[0].mData;
@@ -319,10 +324,18 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const
 
     if (sync)
     {
-        if (thiz.bufferQueueSend < queueOffset - thiz.bytesPerSecond / 2)
+        if (thiz.syncSend == false)
+            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
+        else if (thiz.bufferQueueSend < queueOffset - thiz.bytesPerSecond / 2)
             thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
         else if (thiz.bufferQueueSend > queueOffset)
             thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
+        thiz.syncSend = true;
+    }
+    else
+    {
+        thiz.syncSend = false;
+        thiz.syncPick = false;
     }
 
     thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
