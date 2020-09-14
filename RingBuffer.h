@@ -9,7 +9,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct RingBuffer
+#ifndef STREAMAL_EXPORT
+#define STREAMAL_EXPORT
+#endif
+
+struct STREAMAL_EXPORT RingBuffer
 {
     RingBuffer();
     ~RingBuffer();

@@ -8,7 +8,11 @@
 
 #include <stdint.h>
 
-struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer, bool record);
-void WWaveOutDestroy(struct WWaveOut* waveOut);
-uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
-void WWaveOutVolume(struct WWaveOut* waveOut, float volume);
+#ifndef STREAMAL_EXPORT
+#define STREAMAL_EXPORT
+#endif
+
+STREAMAL_EXPORT struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer, bool record);
+STREAMAL_EXPORT void WWaveOutDestroy(struct WWaveOut* waveOut);
+STREAMAL_EXPORT uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
+STREAMAL_EXPORT void WWaveOutVolume(struct WWaveOut* waveOut, float volume);

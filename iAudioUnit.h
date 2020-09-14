@@ -9,15 +9,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
-extern bool iAudioUnitAvailable;
+#ifndef STREAMAL_EXPORT
+#define STREAMAL_EXPORT
+#endif
+
+STREAMAL_EXPORT extern bool iAudioUnitAvailable;
 //==============================================================================
 // AudioUnit Utility
 //==============================================================================
-struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBuffer, bool record = false);
-uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
-size_t iAudioUnitDequeue(struct iAudioUnit* audioUnit, void* buffer, size_t bufferSize, bool drop = false);
-void iAudioUnitPlay(struct iAudioUnit* audioUnit);
-void iAudioUnitStop(struct iAudioUnit* audioUnit);
-void iAudioUnitPause(struct iAudioUnit* audioUnit);
-void iAudioUnitVolume(struct iAudioUnit* audioUnit, float volume);
-void iAudioUnitDestroy(struct iAudioUnit* audioUnit);
+STREAMAL_EXPORT struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBuffer, bool record = false);
+STREAMAL_EXPORT uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
+STREAMAL_EXPORT size_t iAudioUnitDequeue(struct iAudioUnit* audioUnit, void* buffer, size_t bufferSize, bool drop = false);
+STREAMAL_EXPORT void iAudioUnitPlay(struct iAudioUnit* audioUnit);
+STREAMAL_EXPORT void iAudioUnitStop(struct iAudioUnit* audioUnit);
+STREAMAL_EXPORT void iAudioUnitPause(struct iAudioUnit* audioUnit);
+STREAMAL_EXPORT void iAudioUnitVolume(struct iAudioUnit* audioUnit, float volume);
+STREAMAL_EXPORT void iAudioUnitDestroy(struct iAudioUnit* audioUnit);
