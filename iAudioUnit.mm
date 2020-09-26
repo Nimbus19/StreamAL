@@ -35,9 +35,6 @@ struct iAudioUnit
 
     bool cancel;
     bool ready;
-    bool sync;
-    bool syncSend;
-    bool syncPick;
     bool record;
 };
 //------------------------------------------------------------------------------
@@ -52,17 +49,6 @@ static OSStatus playerCallback(void* inRefCon,
 
     if (thiz.cancel == false)
     {
-        if (thiz.sync)
-        {
-            if (thiz.syncPick == false)
-                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
-            else if (thiz.bufferQueuePick < thiz.bufferQueueSend - thiz.bytesPerSecond / 2)
-                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
-            else if (thiz.bufferQueuePick > thiz.bufferQueueSend)
-                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
-            thiz.syncPick = true;
-        }
-
         short* output = (short*)ioData->mBuffers[0].mData;
         size_t outputSize = ioData->mBuffers[0].mDataByteSize;
         thiz.bufferQueuePick += thiz.bufferQueue.Gather(thiz.bufferQueuePick, output, outputSize, true);
@@ -296,7 +282,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
         thiz.channel = channel;
         thiz.sampleRate = sampleRate;
         thiz.bytesPerSecond = sampleRate * sizeof(int16_t) * channel;
-        thiz.volume = 1.0f;
+        thiz.volume = 0.0f;
         thiz.record = record;
 
         return audioUnit;
@@ -306,48 +292,39 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
     return nullptr;
 }
 //------------------------------------------------------------------------------
-uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
+uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t timestamp, const void* buffer, size_t bufferSize)
 {
     if (audioUnit == nullptr)
         return 0;
     iAudioUnit& thiz = (*audioUnit);
     if (thiz.record)
         return 0;
+    if (bufferSize == 0)
+        return 0;
 
-    uint64_t queueOffset = timestamp * thiz.bytesPerSecond / 1000000;
-
-    if (bufferSize)
+    if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
     {
-        queueOffset = queueOffset + bufferSize / 2 - 1;
-        queueOffset = queueOffset - queueOffset % bufferSize;
+        thiz.bufferQueueSend = 0;
+        timestamp = now;
     }
 
-    if (sync)
+    if (thiz.bufferQueueSend == 0)
     {
-        if (thiz.syncSend == false)
-            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
-        else if (thiz.bufferQueueSend < queueOffset - thiz.bytesPerSecond / 2)
-            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
-        else if (thiz.bufferQueueSend > queueOffset)
-            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
-        thiz.syncSend = true;
+        thiz.bufferQueueSend = timestamp * thiz.bytesPerSecond / 1000000;
+        thiz.bufferQueueSend = thiz.bufferQueueSend - (thiz.bufferQueueSend % bufferSize);
     }
-    else
-    {
-        thiz.syncSend = false;
-        thiz.syncPick = false;
-    }
-
     thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
     if (thiz.ready == false)
     {
         thiz.ready = true;
+        thiz.bufferQueuePick = now * thiz.bytesPerSecond / 1000000 - bufferSize;
+        thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
 
-        AudioOutputUnitStart(thiz.instance);
+        if (thiz.instance)
+            AudioOutputUnitStart(thiz.instance);
     }
 
-    thiz.sync = sync;
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------

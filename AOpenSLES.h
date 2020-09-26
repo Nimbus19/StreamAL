@@ -34,7 +34,7 @@ STREAMAL_EXPORT extern SLInterfaceID AOpenSLES_SL_IID_VOLUME;
 // OpenSL ES Utility
 //==============================================================================
 STREAMAL_EXPORT struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuffer, bool record = false);
-STREAMAL_EXPORT uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync = false);
+STREAMAL_EXPORT uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t timestamp, const void* buffer, size_t bufferSize);
 STREAMAL_EXPORT size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferSize, bool drop = false);
 STREAMAL_EXPORT void AOpenSLESPlay(struct AOpenSLES* openSLES);
 STREAMAL_EXPORT void AOpenSLESStop(struct AOpenSLES* openSLES);

@@ -33,9 +33,7 @@ struct WWaveOut
     float volume;
 
     bool cancel;
-    bool sync;
-    bool syncSend;
-    bool syncPick;
+    bool ready;
     bool record;
 
     int bufferSize;
@@ -60,17 +58,6 @@ DWORD WINAPI WWaveOutThread(LPVOID arg)
         thiz.waveHeaderIndex++;
         if (thiz.waveHeaderIndex >= _countof(thiz.waveHeader))
             thiz.waveHeaderIndex = 0;
-
-        if (thiz.sync)
-        {
-            if (thiz.syncPick == false)
-                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
-            else if (thiz.bufferQueuePick < thiz.bufferQueueSend - thiz.bytesPerSecond / 2)
-                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
-            else if (thiz.bufferQueuePick > thiz.bufferQueueSend)
-                thiz.bufferQueuePick = thiz.bufferQueueSend - thiz.bytesPerSecond / 10;
-            thiz.syncPick = true;
-        }
 
         size_t outputSize = thiz.bufferSize;
         short* output = (short*)thiz.bufferQueue.Address(thiz.bufferQueuePick, &outputSize);
@@ -135,14 +122,10 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         if (thiz.semaphore == nullptr)
             break;
 
-        thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
-        if (thiz.thread == nullptr)
-            break;
-
         thiz.channel = channel;
         thiz.sampleRate = sampleRate;
         thiz.bytesPerSecond = sampleRate * sizeof(int16_t) * channel;
-        thiz.volume = 1.0f;
+        thiz.volume = 0.0f;
         thiz.record = record;
 
         return waveOut;
@@ -173,40 +156,38 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
     delete& thiz;
 }
 //------------------------------------------------------------------------------
-uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t timestamp, const void* buffer, size_t bufferSize, bool sync)
+uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, const void* buffer, size_t bufferSize)
 {
     if (waveOut == nullptr)
         return 0;
     WWaveOut& thiz = (*waveOut);
+    if (bufferSize == 0)
+        return 0;
 
-    uint64_t queueOffset = timestamp * thiz.bytesPerSecond / 1000000;
-
-    if (bufferSize)
+    if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
     {
-        queueOffset = queueOffset + bufferSize / 2 - 1;
-        queueOffset = queueOffset - queueOffset % bufferSize;
+        thiz.bufferQueueSend = 0;
+        timestamp = now;
     }
 
-    if (sync)
+    if (thiz.bufferQueueSend == 0)
     {
-        if (thiz.syncSend == false)
-            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
-        else if (thiz.bufferQueueSend < queueOffset - thiz.bytesPerSecond / 2)
-            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
-        else if (thiz.bufferQueueSend > queueOffset)
-            thiz.bufferQueueSend = queueOffset - thiz.bytesPerSecond / 10;
-        thiz.syncSend = true;
+        thiz.bufferQueueSend = timestamp * thiz.bytesPerSecond / 1000000;
+        thiz.bufferQueueSend = thiz.bufferQueueSend - (thiz.bufferQueueSend % bufferSize);
     }
-    else
-    {
-        thiz.syncSend = false;
-        thiz.syncPick = false;
-    }
-
     thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
+    if (thiz.ready == false)
+    {
+        thiz.ready = true;
+        thiz.bufferQueuePick = now * thiz.bytesPerSecond / 1000000 - bufferSize;
+        thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
+
+        if (thiz.thread == nullptr)
+            thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
+    }
+
     thiz.bufferSize = bufferSize;
-    thiz.sync = sync;
     ReleaseSemaphore(thiz.semaphore, 1, nullptr);
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
