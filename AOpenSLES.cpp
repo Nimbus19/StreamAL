@@ -114,6 +114,7 @@ struct AOpenSLES
     bool ready;
     bool record;
 
+    int bufferSize;
     short temp[4096];
 };
 //------------------------------------------------------------------------------
@@ -124,7 +125,7 @@ static void playerCallback(SLAndroidSimpleBufferQueueItf, void* context)
     if (thiz.cancel == false)
     {
         short* output = (short*)thiz.temp;
-        uint64_t outputSize = 1024 * sizeof(short) * thiz.channel;
+        uint64_t outputSize = thiz.bufferSize;
         thiz.bufferQueuePick += thiz.bufferQueue.Gather(thiz.bufferQueuePick, output, outputSize, true);
         scaleWaveform(output, outputSize, thiz.volume);
 
@@ -327,6 +328,7 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t times
     if (thiz.ready == false)
     {
         thiz.ready = true;
+        thiz.bufferSize = bufferSize;
         thiz.bufferQueuePick = now * thiz.bytesPerSecond / 1000000 - bufferSize;
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
 

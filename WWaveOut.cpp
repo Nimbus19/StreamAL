@@ -180,6 +180,7 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
     if (thiz.ready == false)
     {
         thiz.ready = true;
+        thiz.bufferSize = bufferSize;
         thiz.bufferQueuePick = now * thiz.bytesPerSecond / 1000000 - bufferSize;
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
 
@@ -187,7 +188,6 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
             thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
     }
 
-    thiz.bufferSize = bufferSize;
     ReleaseSemaphore(thiz.semaphore, 1, nullptr);
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }

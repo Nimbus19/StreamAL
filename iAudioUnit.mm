@@ -36,6 +36,8 @@ struct iAudioUnit
     bool cancel;
     bool ready;
     bool record;
+
+    int bufferSize;
 };
 //------------------------------------------------------------------------------
 static OSStatus playerCallback(void* inRefCon,
@@ -318,6 +320,7 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t ti
     if (thiz.ready == false)
     {
         thiz.ready = true;
+        thiz.bufferSize = bufferSize;
         thiz.bufferQueuePick = now * thiz.bytesPerSecond / 1000000 - bufferSize;
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
 
