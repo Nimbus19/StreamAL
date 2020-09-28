@@ -118,7 +118,7 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         if (waveOutOpen(nullptr, WAVE_MAPPER, &thiz.waveFormat, 0, 0, WAVE_FORMAT_QUERY) != MMSYSERR_NOERROR)
             break;
 
-        thiz.semaphore = CreateSemaphoreA(nullptr, 0, 1, "WWaveOut");
+        thiz.semaphore = CreateSemaphoreA(nullptr, 0, LONG_MAX, nullptr);
         if (thiz.semaphore == nullptr)
             break;
 
@@ -156,7 +156,7 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
     delete& thiz;
 }
 //------------------------------------------------------------------------------
-uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, const void* buffer, size_t bufferSize)
+uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, uint64_t offset, const void* buffer, size_t bufferSize)
 {
     if (waveOut == nullptr)
         return 0;
@@ -170,12 +170,15 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
         timestamp = now;
     }
 
+    offset = offset * thiz.bytesPerSecond / 1000000;
+    offset = offset - (offset % bufferSize);
+
     if (thiz.bufferQueueSend == 0)
     {
         thiz.bufferQueueSend = timestamp * thiz.bytesPerSecond / 1000000;
         thiz.bufferQueueSend = thiz.bufferQueueSend - (thiz.bufferQueueSend % bufferSize);
     }
-    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
+    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend + offset, buffer, bufferSize);
 
     if (thiz.ready == false)
     {
@@ -189,7 +192,7 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
     }
 
     ReleaseSemaphore(thiz.semaphore, 1, nullptr);
-    return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
+    return (thiz.bufferQueuePick - offset) * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
 void WWaveOutVolume(struct WWaveOut* waveOut, float volume)
