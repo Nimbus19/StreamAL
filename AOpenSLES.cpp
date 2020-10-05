@@ -339,7 +339,6 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t times
             (*thiz.playerBufferQueue)->Enqueue(thiz.playerBufferQueue, thiz.temp, sizeof(short) * thiz.channel);
     }
 
-    thiz.sync = sync;
     return (thiz.bufferQueuePick - offset) * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
