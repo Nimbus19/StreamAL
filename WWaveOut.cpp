@@ -141,9 +141,10 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
         return;
     WWaveOut& thiz = (*waveOut);
 
+    thiz.cancel = true;
+
     if (thiz.thread)
     {
-        thiz.cancel = true;
         ReleaseSemaphore(thiz.semaphore, 1, nullptr);
         WaitForSingleObject(thiz.thread, INFINITE);
         CloseHandle(thiz.thread);
