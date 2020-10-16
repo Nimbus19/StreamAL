@@ -103,6 +103,7 @@ struct AOpenSLES
     RingBuffer bufferQueue;
     uint64_t bufferQueueSend;
     uint64_t bufferQueuePick;
+    uint64_t bufferQueueOffset;
 
     uint32_t channel;
     uint32_t sampleRate;
@@ -295,7 +296,7 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
     return nullptr;
 }
 //------------------------------------------------------------------------------
-uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t timestamp, uint64_t offset, const void* buffer, size_t bufferSize)
+uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t timestamp, const void* buffer, size_t bufferSize)
 {
     if (openSLES == nullptr)
         return 0;
@@ -311,15 +312,12 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t times
         timestamp = now;
     }
 
-    offset = offset * thiz.bytesPerSecond / 1000000;
-    offset = offset - (offset % bufferSize);
-
     if (thiz.bufferQueueSend == 0)
     {
         thiz.bufferQueueSend = timestamp * thiz.bytesPerSecond / 1000000;
         thiz.bufferQueueSend = thiz.bufferQueueSend - (thiz.bufferQueueSend % bufferSize);
     }
-    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend + offset, buffer, bufferSize);
+    thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
     if (thiz.ready == false)
     {
@@ -332,7 +330,7 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t times
             (*thiz.playerBufferQueue)->Enqueue(thiz.playerBufferQueue, thiz.temp, sizeof(short) * thiz.channel);
     }
 
-    return (thiz.bufferQueuePick - offset) * 1000000 / thiz.bytesPerSecond;
+    return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
 size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferSize, bool drop)
