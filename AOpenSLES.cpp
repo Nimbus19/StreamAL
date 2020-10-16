@@ -103,7 +103,8 @@ struct AOpenSLES
     RingBuffer bufferQueue;
     uint64_t bufferQueueSend;
     uint64_t bufferQueuePick;
-    uint64_t bufferQueueOffset;
+    int64_t bufferQueueSendAdjust;
+    int64_t bufferQueuePickAdjust;
 
     uint32_t channel;
     uint32_t sampleRate;
@@ -296,7 +297,7 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
     return nullptr;
 }
 //------------------------------------------------------------------------------
-uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t timestamp, const void* buffer, size_t bufferSize)
+uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize)
 {
     if (openSLES == nullptr)
         return 0;
@@ -309,22 +310,31 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t times
     if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
     {
         thiz.bufferQueueSend = 0;
-        timestamp = now;
+        timestamp = now + thiz.bufferQueuePickAdjust;
     }
 
-    if (thiz.bufferQueueSend == 0)
+    if (thiz.bufferQueueSend == 0 || thiz.bufferQueueSendAdjust != adjust)
     {
-        thiz.bufferQueueSend = timestamp * thiz.bytesPerSecond / 1000000;
+        thiz.bufferQueueSend = (timestamp + adjust) * thiz.bytesPerSecond / 1000000;
         thiz.bufferQueueSend = thiz.bufferQueueSend - (thiz.bufferQueueSend % bufferSize);
+        thiz.bufferQueueSendAdjust = adjust;
     }
     thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, buffer, bufferSize);
 
     if (thiz.ready == false)
     {
         thiz.ready = true;
+
+        adjust = 0;
+        if (now > timestamp)
+        {
+            adjust = timestamp - now;
+        }
+
         thiz.bufferSize = bufferSize;
-        thiz.bufferQueuePick = now * thiz.bytesPerSecond / 1000000 - bufferSize;
+        thiz.bufferQueuePick = (now + adjust) * thiz.bytesPerSecond / 1000000 - bufferSize;
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
+        thiz.bufferQueuePickAdjust = adjust;
 
         if (thiz.playerBufferQueue)
             (*thiz.playerBufferQueue)->Enqueue(thiz.playerBufferQueue, thiz.temp, sizeof(short) * thiz.channel);
