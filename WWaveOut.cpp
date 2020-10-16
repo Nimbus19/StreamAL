@@ -167,10 +167,13 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
     if (bufferSize == 0)
         return 0;
 
-    if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
+    if (thiz.ready)
     {
-        thiz.bufferQueueSend = 0;
-        timestamp = now + thiz.bufferQueuePickAdjust;
+        if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
+        {
+            thiz.bufferQueueSend = 0;
+            timestamp = now + thiz.bufferQueuePickAdjust;
+        }
     }
 
     if (thiz.bufferQueueSend == 0 || thiz.bufferQueueSendAdjust != adjust)

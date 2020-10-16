@@ -306,10 +306,13 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t ti
     if (bufferSize == 0)
         return 0;
 
-    if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
+    if (thiz.ready)
     {
-        thiz.bufferQueueSend = 0;
-        timestamp = now + thiz.bufferQueuePickAdjust;
+        if (thiz.bufferQueueSend < thiz.bufferQueuePick || thiz.bufferQueueSend > thiz.bufferQueuePick + thiz.bytesPerSecond / 2)
+        {
+            thiz.bufferQueueSend = 0;
+            timestamp = now + thiz.bufferQueuePickAdjust;
+        }
     }
 
     if (thiz.bufferQueueSend == 0 || thiz.bufferQueueSendAdjust != adjust)
