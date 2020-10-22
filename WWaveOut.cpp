@@ -159,7 +159,7 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
     delete& thiz;
 }
 //------------------------------------------------------------------------------
-uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize)
+uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap)
 {
     if (waveOut == nullptr)
         return 0;
@@ -195,7 +195,7 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
         }
 
         thiz.bufferSize = bufferSize;
-        thiz.bufferQueuePick = (now + adjust) * thiz.bytesPerSecond / 1000000 - bufferSize;
+        thiz.bufferQueuePick = (now + adjust) * thiz.bytesPerSecond / 1000000 - bufferSize * gap;
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
         thiz.bufferQueuePickAdjust = adjust;
 

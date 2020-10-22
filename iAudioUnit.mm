@@ -296,7 +296,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
     return nullptr;
 }
 //------------------------------------------------------------------------------
-uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize)
+uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap)
 {
     if (audioUnit == nullptr)
         return 0;
@@ -334,7 +334,7 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t ti
         }
 
         thiz.bufferSize = bufferSize;
-        thiz.bufferQueuePick = (now + adjust) * thiz.bytesPerSecond / 1000000 - bufferSize;
+        thiz.bufferQueuePick = (now + adjust) * thiz.bytesPerSecond / 1000000 - bufferSize * gap;
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
         thiz.bufferQueuePickAdjust = adjust;
 
