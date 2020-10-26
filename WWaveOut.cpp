@@ -57,22 +57,29 @@ DWORD WINAPI WWaveOutThread(LPVOID arg)
         if (thiz.cancel)
             break;
 
-        thiz.waveHeaderIndex++;
-        if (thiz.waveHeaderIndex >= _countof(thiz.waveHeader))
-            thiz.waveHeaderIndex = 0;
-
         size_t outputSize = thiz.bufferSize;
-        short* output = (short*)thiz.bufferQueue.Address(thiz.bufferQueuePick, &outputSize);
-        scaleWaveform(output, outputSize, thiz.volume);
+        for (int i = 0; i < 2; ++i)
+        {
+            thiz.waveHeaderIndex++;
+            if (thiz.waveHeaderIndex >= _countof(thiz.waveHeader))
+                thiz.waveHeaderIndex = 0;
 
-        thiz.waveHeader[thiz.waveHeaderIndex].lpData = (LPSTR)output;
-        thiz.waveHeader[thiz.waveHeaderIndex].dwBufferLength = outputSize;
-        thiz.bufferQueuePick += outputSize;
+            short* output = (short*)thiz.bufferQueue.Address(thiz.bufferQueuePick, &outputSize);
+            scaleWaveform(output, outputSize, thiz.volume);
 
-        if (thiz.waveHeader[thiz.waveHeaderIndex].dwFlags & WHDR_PREPARED)
-            waveOutUnprepareHeader(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
-        waveOutPrepareHeader(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
-        waveOutWrite(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
+            thiz.waveHeader[thiz.waveHeaderIndex].lpData = (LPSTR)output;
+            thiz.waveHeader[thiz.waveHeaderIndex].dwBufferLength = outputSize;
+            thiz.bufferQueuePick += outputSize;
+
+            if (thiz.waveHeader[thiz.waveHeaderIndex].dwFlags & WHDR_PREPARED)
+                waveOutUnprepareHeader(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
+            waveOutPrepareHeader(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
+            waveOutWrite(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
+
+            outputSize = thiz.bufferSize - outputSize;
+            if (outputSize == 0)
+                break;
+        }
     }
 
     if (thiz.waveOut)
