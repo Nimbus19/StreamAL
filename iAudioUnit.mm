@@ -276,6 +276,8 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
             AudioOutputUnitStart(thiz.instance);
 
 #if TARGET_OS_IPHONE
+            [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
+                                                   error:nil];
             [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker
                                                                error:nil];
             [[AVAudioSession sharedInstance] setActive:YES
