@@ -214,6 +214,36 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
+size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, size_t bufferSize, bool drop)
+{
+    if (waveOut == nullptr)
+        return 0;
+    WWaveOut& thiz = (*waveOut);
+    if (thiz.record == false)
+        return 0;
+
+    if (thiz.ready == false)
+    {
+        thiz.ready = true;
+    }
+
+    if (drop)
+    {
+        uint64_t available = thiz.bufferQueueSend - thiz.bufferQueuePick;
+        while (available > thiz.bytesPerSecond)
+        {
+            thiz.bufferQueuePick += thiz.bytesPerSecond;
+            available = thiz.bufferQueueSend - thiz.bufferQueuePick;
+        }
+    }
+
+    if (thiz.bufferQueueSend < thiz.bufferQueuePick + bufferSize)
+        return 0;
+    thiz.bufferQueuePick += thiz.bufferQueue.Gather(thiz.bufferQueuePick, buffer, bufferSize, true);
+
+    return bufferSize;
+}
+//------------------------------------------------------------------------------
 void WWaveOutVolume(struct WWaveOut* waveOut, float volume)
 {
     if (waveOut == nullptr)
