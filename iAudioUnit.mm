@@ -40,6 +40,7 @@ struct iAudioUnit
     bool record;
 
     int bufferSize;
+    short temp[4096];
 };
 //------------------------------------------------------------------------------
 static OSStatus playerCallback(void* inRefCon,
@@ -78,15 +79,16 @@ static OSStatus recorderCallback(void* inRefCon,
     {
         AudioBufferList bufferList;
         bufferList.mNumberBuffers = 1;
-        bufferList.mBuffers[0].mData = nullptr;
-        bufferList.mBuffers[0].mDataByteSize = 0;
+        bufferList.mBuffers[0].mData = thiz.temp;
+        bufferList.mBuffers[0].mDataByteSize = sizeof(thiz.temp);
+        bufferList.mBuffers[0].mNumberChannels = 1;
         OSStatus status = AudioUnitRender(thiz.instance,
                                           ioActionFlags,
                                           inTimeStamp,
                                           kBusMicrophone,
                                           inNumberFrames,
                                           &bufferList);
-        if (status == noErr)
+        if (status == noErr || status == kAudioUnitErr_CannotDoInCurrentContext)
         {
             short* input = (short*)bufferList.mBuffers[0].mData;
             size_t inputSize = bufferList.mBuffers[0].mDataByteSize;
@@ -140,7 +142,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
 #if TARGET_OS_IPHONE
             desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
 #else
-            desc.componentSubType = kAudioUnitSubType_DefaultOutput;
+            desc.componentSubType = kAudioUnitSubType_HALOutput;
 #endif
             desc.componentFlags = 0;
             desc.componentFlagsMask = 0;
