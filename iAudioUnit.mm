@@ -312,7 +312,7 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t ti
 
 #if TARGET_OS_IPHONE
     AVAudioSession* session = [AVAudioSession sharedInstance];
-    if (session.inputDataSource == nil || session.inputDataSources == nil || session.inputDataSources.count == 0)
+    if (session.otherAudioPlaying || session.inputDataSource == nil || session.inputDataSources == nil || session.inputDataSources.count == 0)
     {
         if (thiz.ready)
         {
