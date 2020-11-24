@@ -164,6 +164,14 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
             format.mBytesPerPacket = format.mBytesPerFrame * format.mFramesPerPacket;
             if (AudioUnitSetProperty(thiz.instance,
                                      kAudioUnitProperty_StreamFormat,
+                                     kAudioUnitScope_Input,
+                                     kBusSpeaker,
+                                     &format,
+                                     sizeof(format)) != noErr)
+                break;
+
+            if (AudioUnitSetProperty(thiz.instance,
+                                     kAudioUnitProperty_StreamFormat,
                                      kAudioUnitScope_Output,
                                      kBusMicrophone,
                                      &format,
@@ -187,6 +195,25 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
                                      &disable,
                                      sizeof(disable)) != noErr)
                 break;
+
+#if TARGET_OS_OSX
+            AudioObjectPropertyAddress addr;
+            UInt32 size = sizeof(AudioDeviceID);
+            AudioDeviceID deviceID = 0;
+
+            addr.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+            addr.mScope = kAudioObjectPropertyScopeGlobal;
+            addr.mElement = kAudioObjectPropertyElementMaster;
+
+            AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0, NULL, &size, &deviceID);
+            if (AudioUnitSetProperty(thiz.instance,
+                                     kAudioOutputUnitProperty_CurrentDevice,
+                                     kAudioUnitScope_Global,
+                                     kBusSpeaker,
+                                     &deviceID,
+                                     size) != noErr)
+                break;
+#endif
 
             AURenderCallbackStruct recorderCallbackStruct = { recorderCallback, audioUnit };
             if (AudioUnitSetProperty(thiz.instance,
