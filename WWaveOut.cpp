@@ -36,6 +36,7 @@ struct WWaveOut
 
     bool cancel;
     bool ready;
+    bool go;
     bool record;
 
     int bufferSize;
@@ -69,7 +70,14 @@ DWORD WINAPI WWaveOutThread(LPVOID arg)
 
             thiz.waveHeader[thiz.waveHeaderIndex].lpData = (LPSTR)output;
             thiz.waveHeader[thiz.waveHeaderIndex].dwBufferLength = outputSize;
-            thiz.bufferQueuePick += outputSize;
+            if (thiz.go)
+            {
+                thiz.bufferQueuePick += outputSize;
+            }
+            else
+            {
+                memset(output, 0, outputSize);
+            }
 
             if (thiz.waveHeader[thiz.waveHeaderIndex].dwFlags & WHDR_PREPARED)
                 waveOutUnprepareHeader(thiz.waveOut, &thiz.waveHeader[thiz.waveHeaderIndex], sizeof(WAVEHDR));
@@ -208,6 +216,10 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
 
         if (thiz.thread == nullptr)
             thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
+    }
+    else
+    {
+        thiz.go = true;
     }
 
     ReleaseSemaphore(thiz.semaphore, 1, nullptr);

@@ -37,6 +37,7 @@ struct iAudioUnit
 
     bool cancel;
     bool ready;
+    bool go;
     bool record;
 
     int bufferSize;
@@ -56,8 +57,15 @@ static OSStatus playerCallback(void* inRefCon,
     {
         short* output = (short*)ioData->mBuffers[0].mData;
         size_t outputSize = ioData->mBuffers[0].mDataByteSize;
-        thiz.bufferQueuePick += thiz.bufferQueue.Gather(thiz.bufferQueuePick, output, outputSize, true);
-        scaleWaveform(output, outputSize, thiz.volume);
+        if (thiz.go)
+        {
+            thiz.bufferQueuePick += thiz.bufferQueue.Gather(thiz.bufferQueuePick, output, outputSize, true);
+            scaleWaveform(output, outputSize, thiz.volume);
+        }
+        else
+        {
+            memset(output, 0, outputSize);
+        }
 
         return noErr;
     }
@@ -384,6 +392,10 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t ti
 
         if (thiz.instance)
             AudioOutputUnitStart(thiz.instance);
+    }
+    else
+    {
+        thiz.go = true;
     }
 
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
