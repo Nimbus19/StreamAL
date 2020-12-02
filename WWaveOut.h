@@ -16,4 +16,7 @@ STREAMAL_EXPORT struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int
 STREAMAL_EXPORT void WWaveOutDestroy(struct WWaveOut* waveOut);
 STREAMAL_EXPORT uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap);
 STREAMAL_EXPORT size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, size_t bufferSize, bool drop = false);
+STREAMAL_EXPORT void WWaveOutPlay(struct WWaveOut* waveOut);
+STREAMAL_EXPORT void WWaveOutStop(struct WWaveOut* waveOut);
+STREAMAL_EXPORT void WWaveOutPause(struct WWaveOut* waveOut);
 STREAMAL_EXPORT void WWaveOutVolume(struct WWaveOut* waveOut, float volume);

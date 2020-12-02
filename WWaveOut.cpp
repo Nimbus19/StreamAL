@@ -256,6 +256,33 @@ size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, size_t bufferSize
     return bufferSize;
 }
 //------------------------------------------------------------------------------
+void WWaveOutPlay(struct WWaveOut* waveOut)
+{
+    if (waveOut == nullptr)
+        return;
+    WWaveOut& thiz = (*waveOut);
+
+    thiz.go = true;
+}
+//------------------------------------------------------------------------------
+void WWaveOutStop(struct WWaveOut* waveOut)
+{
+    if (waveOut == nullptr)
+        return;
+    WWaveOut& thiz = (*waveOut);
+
+    thiz.go = false;
+}
+//------------------------------------------------------------------------------
+void WWaveOutPause(struct WWaveOut* waveOut)
+{
+    if (waveOut == nullptr)
+        return;
+    WWaveOut& thiz = (*waveOut);
+
+    thiz.go = false;
+}
+//------------------------------------------------------------------------------
 void WWaveOutVolume(struct WWaveOut* waveOut, float volume)
 {
     if (waveOut == nullptr)
