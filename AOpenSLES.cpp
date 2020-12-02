@@ -438,6 +438,24 @@ void AOpenSLESPause(struct AOpenSLES* openSLES)
     }
 }
 //------------------------------------------------------------------------------
+void AOpenSLESReset(struct AOpenSLES* openSLES)
+{
+    if (openSLES == nullptr)
+        return;
+    AOpenSLES& thiz = (*openSLES);
+
+    if (thiz.record)
+    {
+        (*thiz.recorderRecord)->SetRecordState(thiz.recorderRecord, SL_RECORDSTATE_STOPPED);
+    }
+    else
+    {
+        (*thiz.playerPlay)->SetPlayState(thiz.playerPlay, SL_PLAYSTATE_STOPPED);
+        thiz.ready = false;
+        thiz.go = false;
+    }
+}
+//------------------------------------------------------------------------------
 void AOpenSLESVolume(struct AOpenSLES* openSLES, float volume)
 {
     if (openSLES == nullptr)

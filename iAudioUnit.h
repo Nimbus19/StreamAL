@@ -23,5 +23,6 @@ STREAMAL_EXPORT size_t iAudioUnitDequeue(struct iAudioUnit* audioUnit, void* buf
 STREAMAL_EXPORT void iAudioUnitPlay(struct iAudioUnit* audioUnit);
 STREAMAL_EXPORT void iAudioUnitStop(struct iAudioUnit* audioUnit);
 STREAMAL_EXPORT void iAudioUnitPause(struct iAudioUnit* audioUnit);
+STREAMAL_EXPORT void iAudioUnitReset(struct iAudioUnit* audioUnit);
 STREAMAL_EXPORT void iAudioUnitVolume(struct iAudioUnit* audioUnit, float volume);
 STREAMAL_EXPORT void iAudioUnitDestroy(struct iAudioUnit* audioUnit);

@@ -283,6 +283,16 @@ void WWaveOutPause(struct WWaveOut* waveOut)
     thiz.go = false;
 }
 //------------------------------------------------------------------------------
+void WWaveOutReset(struct WWaveOut* waveOut)
+{
+    if (waveOut == nullptr)
+        return;
+    WWaveOut& thiz = (*waveOut);
+
+    thiz.ready = false;
+    thiz.go = false;
+}
+//------------------------------------------------------------------------------
 void WWaveOutVolume(struct WWaveOut* waveOut, float volume)
 {
     if (waveOut == nullptr)

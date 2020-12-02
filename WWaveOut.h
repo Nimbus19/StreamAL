@@ -19,4 +19,5 @@ STREAMAL_EXPORT size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, s
 STREAMAL_EXPORT void WWaveOutPlay(struct WWaveOut* waveOut);
 STREAMAL_EXPORT void WWaveOutStop(struct WWaveOut* waveOut);
 STREAMAL_EXPORT void WWaveOutPause(struct WWaveOut* waveOut);
+STREAMAL_EXPORT void WWaveOutReset(struct WWaveOut* waveOut);
 STREAMAL_EXPORT void WWaveOutVolume(struct WWaveOut* waveOut, float volume);

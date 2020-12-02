@@ -39,5 +39,6 @@ STREAMAL_EXPORT size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer
 STREAMAL_EXPORT void AOpenSLESPlay(struct AOpenSLES* openSLES);
 STREAMAL_EXPORT void AOpenSLESStop(struct AOpenSLES* openSLES);
 STREAMAL_EXPORT void AOpenSLESPause(struct AOpenSLES* openSLES);
+STREAMAL_EXPORT void AOpenSLESReset(struct AOpenSLES* openSLES);
 STREAMAL_EXPORT void AOpenSLESVolume(struct AOpenSLES* openSLES, float volume);
 STREAMAL_EXPORT void AOpenSLESDestroy(struct AOpenSLES* openSLES);
