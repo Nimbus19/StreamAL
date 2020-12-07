@@ -18,8 +18,8 @@
 struct WWaveIO
 {
     WAVEFORMATEX waveFormat;
-    HWAVEOUT waveOut;
     HWAVEIN waveIn;
+    HWAVEOUT waveOut;
     WAVEHDR waveHeader[8];
     int waveHeaderIndex;
 
@@ -47,11 +47,14 @@ struct WWaveIO
     short temp[8192];
 };
 //------------------------------------------------------------------------------
-static DWORD WINAPI WWaveIOThread(LPVOID arg)
+static DWORD WINAPI WWaveOutThread(LPVOID arg)
 {
     WWaveIO& thiz = *(WWaveIO*)arg;
 
-    waveOutOpen(&thiz.waveOut, WAVE_MAPPER, &thiz.waveFormat, 0, 0, CALLBACK_NULL);
+    if (thiz.cancel == false)
+    {
+        waveOutOpen(&thiz.waveOut, WAVE_MAPPER, &thiz.waveFormat, 0, 0, CALLBACK_NULL);
+    }
 
     while (thiz.waveOut)
     {
@@ -100,7 +103,6 @@ static DWORD WINAPI WWaveIOThread(LPVOID arg)
         {
             if (thiz.waveHeader[i].dwFlags & WHDR_PREPARED)
                 waveOutUnprepareHeader(thiz.waveOut, &thiz.waveHeader[i], sizeof(WAVEHDR));
-            waveOutClose(thiz.waveOut);
         }
         waveOutClose(thiz.waveOut);
         thiz.waveOut = nullptr;
@@ -109,7 +111,7 @@ static DWORD WINAPI WWaveIOThread(LPVOID arg)
     return 0;
 }
 //------------------------------------------------------------------------------
-DWORD WINAPI WWaveInCallback(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+static DWORD WINAPI WWaveInCallback(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
     WWaveIO& thiz = *(WWaveIO*)dwInstance;
 
@@ -130,12 +132,58 @@ DWORD WINAPI WWaveInCallback(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance, D
         break;
     }
     case WIM_CLOSE:
-        waveInStop(hWaveIn);
-        waveInReset(hWaveIn);
-        waveInClose(hWaveIn);
         break;
     default:
         break;
+    }
+
+    return 0;
+};
+//------------------------------------------------------------------------------
+static DWORD WINAPI WWaveInThread(LPVOID arg)
+{
+    WWaveIO& thiz = *(WWaveIO*)arg;
+
+    if (thiz.cancel == false)
+    {
+        waveInOpen(&thiz.waveIn, WAVE_MAPPER, &thiz.waveFormat, (DWORD_PTR)WWaveInCallback, (DWORD_PTR)&thiz, CALLBACK_FUNCTION);
+    }
+
+    if (thiz.waveIn)
+    {
+        thiz.waveHeader[0] = {};
+        thiz.waveHeader[0].lpData = (LPSTR)&thiz.temp[0];
+        thiz.waveHeader[0].dwBufferLength = thiz.bufferSize;
+        thiz.waveHeader[0].dwLoops = TRUE;
+
+        thiz.waveHeader[1] = {};
+        thiz.waveHeader[1].lpData = (LPSTR)&thiz.temp[thiz.bufferSize];
+        thiz.waveHeader[1].dwBufferLength = thiz.bufferSize;
+        thiz.waveHeader[1].dwLoops = TRUE;
+
+        waveInPrepareHeader(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
+        waveInPrepareHeader(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
+        waveInAddBuffer(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
+        waveInAddBuffer(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
+        waveInStart(thiz.waveIn);
+    }
+
+    while (thiz.waveIn)
+    {
+        if (thiz.cancel)
+            break;
+        WaitForSingleObject(thiz.semaphore, INFINITE);
+        if (thiz.cancel)
+            break;
+    }
+
+    if (thiz.waveIn)
+    {
+        waveInStop(thiz.waveIn);
+        waveInUnprepareHeader(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
+        waveInUnprepareHeader(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
+        waveInClose(thiz.waveIn);
+        thiz.waveIn = nullptr;
     }
 
     return 0;
@@ -211,7 +259,8 @@ void WWaveIODestroy(struct WWaveIO* waveOut)
     }
     else
     {
-        WWaveIOThread(&thiz);
+        WWaveInThread(&thiz);
+        WWaveOutThread(&thiz);
     }
 
     delete& thiz;
@@ -260,7 +309,7 @@ uint64_t WWaveIOQueue(struct WWaveIO* waveOut, uint64_t now, uint64_t timestamp,
         thiz.bufferQueuePickAdjust = adjust;
 
         if (thiz.thread == nullptr)
-            thiz.thread = CreateThread(nullptr, 0, WWaveIOThread, &thiz, 0, nullptr);
+            thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
     }
     else
     {
@@ -283,25 +332,11 @@ size_t WWaveIODequeue(struct WWaveIO* waveOut, void* buffer, size_t bufferSize, 
     {
         thiz.ready = true;
 
-        waveInOpen(&thiz.waveIn, WAVE_MAPPER, &thiz.waveFormat, (DWORD_PTR)WWaveInCallback, (DWORD_PTR)&thiz, CALLBACK_FUNCTION);
-        if (thiz.waveIn == nullptr || thiz.waveIn == INVALID_HANDLE_VALUE)
-            return 0;
+        thiz.bufferSize = bufferSize;
+        thiz.bufferQueueSend = 0;
 
-        thiz.waveHeader[0] = {};
-        thiz.waveHeader[0].lpData = (LPSTR)&thiz.temp[0];
-        thiz.waveHeader[0].dwBufferLength = bufferSize;
-        thiz.waveHeader[0].dwLoops = TRUE;
-
-        thiz.waveHeader[1] = {};
-        thiz.waveHeader[1].lpData = (LPSTR)&thiz.temp[bufferSize];
-        thiz.waveHeader[1].dwBufferLength = bufferSize;
-        thiz.waveHeader[1].dwLoops = TRUE;
-
-        waveInPrepareHeader(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
-        waveInPrepareHeader(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
-        waveInAddBuffer(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
-        waveInAddBuffer(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
-        waveInStart(thiz.waveIn);
+        if (thiz.thread == nullptr)
+            thiz.thread = CreateThread(nullptr, 0, WWaveInThread, &thiz, 0, nullptr);
     }
 
     if (drop)
