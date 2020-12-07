@@ -1,5 +1,5 @@
 //==============================================================================
-// Windows WaveOut Wrapper
+// Windows WaveIO Wrapper
 //
 // Copyright (c) 2020 TAiGA
 // https://github.com/metarutaiga/StreamAL
@@ -12,10 +12,10 @@
 #include <mmeapi.h>
 #include "RingBuffer.h"
 #include "Waveform.h"
-#include "WWaveOut.h"
+#include "WWaveIO.h"
 
 //------------------------------------------------------------------------------
-struct WWaveOut
+struct WWaveIO
 {
     WAVEFORMATEX waveFormat;
     HWAVEOUT waveOut;
@@ -47,9 +47,9 @@ struct WWaveOut
     short temp[8192];
 };
 //------------------------------------------------------------------------------
-static DWORD WINAPI WWaveOutThread(LPVOID arg)
+static DWORD WINAPI WWaveIOThread(LPVOID arg)
 {
-    WWaveOut& thiz = *(WWaveOut*)arg;
+    WWaveIO& thiz = *(WWaveIO*)arg;
 
     waveOutOpen(&thiz.waveOut, WAVE_MAPPER, &thiz.waveFormat, 0, 0, CALLBACK_NULL);
 
@@ -111,7 +111,7 @@ static DWORD WINAPI WWaveOutThread(LPVOID arg)
 //------------------------------------------------------------------------------
 DWORD WINAPI WWaveInCallback(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
-    WWaveOut& thiz = *(WWaveOut*)dwInstance;
+    WWaveIO& thiz = *(WWaveIO*)dwInstance;
 
     switch (uMsg)
     {
@@ -141,9 +141,9 @@ DWORD WINAPI WWaveInCallback(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance, D
     return 0;
 }
 //------------------------------------------------------------------------------
-struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer, bool record)
+struct WWaveIO* WWaveIOCreate(int channel, int sampleRate, int secondPerBuffer, bool record)
 {
-    WWaveOut* waveOut = nullptr;
+    WWaveIO* waveOut = nullptr;
 
     switch (0) case 0: default:
     {
@@ -152,10 +152,10 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         if (sampleRate == 0)
             break;
 
-        waveOut = new WWaveOut{};
+        waveOut = new WWaveIO{};
         if (waveOut == nullptr)
             break;
-        WWaveOut& thiz = (*waveOut);
+        WWaveIO& thiz = (*waveOut);
 
         if (thiz.bufferQueue.Startup(sampleRate * sizeof(int16_t) * channel * secondPerBuffer) == false)
             break;
@@ -190,16 +190,16 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
 
         return waveOut;
     }
-    WWaveOutDestroy(waveOut);
+    WWaveIODestroy(waveOut);
 
     return nullptr;
 }
 //------------------------------------------------------------------------------
-void WWaveOutDestroy(struct WWaveOut* waveOut)
+void WWaveIODestroy(struct WWaveIO* waveOut)
 {
     if (waveOut == nullptr)
         return;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
 
     thiz.cancel = true;
 
@@ -211,17 +211,17 @@ void WWaveOutDestroy(struct WWaveOut* waveOut)
     }
     else
     {
-        WWaveOutThread(&thiz);
+        WWaveIOThread(&thiz);
     }
 
     delete& thiz;
 }
 //------------------------------------------------------------------------------
-uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap)
+uint64_t WWaveIOQueue(struct WWaveIO* waveOut, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap)
 {
     if (waveOut == nullptr)
         return 0;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
     if (bufferSize == 0)
         return 0;
     if (thiz.record)
@@ -260,7 +260,7 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
         thiz.bufferQueuePickAdjust = adjust;
 
         if (thiz.thread == nullptr)
-            thiz.thread = CreateThread(nullptr, 0, WWaveOutThread, &thiz, 0, nullptr);
+            thiz.thread = CreateThread(nullptr, 0, WWaveIOThread, &thiz, 0, nullptr);
     }
     else
     {
@@ -271,11 +271,11 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
     return thiz.bufferQueuePick * 1000000 / thiz.bytesPerSecond;
 }
 //------------------------------------------------------------------------------
-size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, size_t bufferSize, bool drop)
+size_t WWaveIODequeue(struct WWaveIO* waveOut, void* buffer, size_t bufferSize, bool drop)
 {
     if (waveOut == nullptr)
         return 0;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
     if (thiz.record == false)
         return 0;
 
@@ -321,48 +321,48 @@ size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, size_t bufferSize
     return bufferSize;
 }
 //------------------------------------------------------------------------------
-void WWaveOutPlay(struct WWaveOut* waveOut)
+void WWaveIOPlay(struct WWaveIO* waveOut)
 {
     if (waveOut == nullptr)
         return;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
 
     thiz.go = true;
 }
 //------------------------------------------------------------------------------
-void WWaveOutStop(struct WWaveOut* waveOut)
+void WWaveIOStop(struct WWaveIO* waveOut)
 {
     if (waveOut == nullptr)
         return;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
 
     thiz.go = false;
 }
 //------------------------------------------------------------------------------
-void WWaveOutPause(struct WWaveOut* waveOut)
+void WWaveIOPause(struct WWaveIO* waveOut)
 {
     if (waveOut == nullptr)
         return;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
 
     thiz.go = false;
 }
 //------------------------------------------------------------------------------
-void WWaveOutReset(struct WWaveOut* waveOut)
+void WWaveIOReset(struct WWaveIO* waveOut)
 {
     if (waveOut == nullptr)
         return;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
 
     thiz.ready = false;
     thiz.go = false;
 }
 //------------------------------------------------------------------------------
-void WWaveOutVolume(struct WWaveOut* waveOut, float volume)
+void WWaveIOVolume(struct WWaveIO* waveOut, float volume)
 {
     if (waveOut == nullptr)
         return;
-    WWaveOut& thiz = (*waveOut);
+    WWaveIO& thiz = (*waveOut);
 
     thiz.volume = volume;
 }
