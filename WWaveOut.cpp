@@ -19,6 +19,7 @@ struct WWaveOut
 {
     WAVEFORMATEX waveFormat;
     HWAVEOUT waveOut;
+    HWAVEIN waveIn;
     WAVEHDR waveHeader[8];
     int waveHeaderIndex;
 
@@ -39,12 +40,14 @@ struct WWaveOut
     bool go;
     bool record;
 
-    int bufferSize;
     HANDLE thread;
     HANDLE semaphore;
+
+    int bufferSize;
+    short temp[8192];
 };
 //------------------------------------------------------------------------------
-DWORD WINAPI WWaveOutThread(LPVOID arg)
+static DWORD WINAPI WWaveOutThread(LPVOID arg)
 {
     WWaveOut& thiz = *(WWaveOut*)arg;
 
@@ -106,6 +109,38 @@ DWORD WINAPI WWaveOutThread(LPVOID arg)
     return 0;
 }
 //------------------------------------------------------------------------------
+DWORD WINAPI WWaveInCallback(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+{
+    WWaveOut& thiz = *(WWaveOut*)dwInstance;
+
+    switch (uMsg)
+    {
+    case WIM_OPEN:
+        break;
+    case WIM_DATA:
+    {
+        PWAVEHDR hdr = (PWAVEHDR)dwParam1;
+
+        short* input = (short*)hdr->lpData;
+        size_t inputSize = hdr->dwBufferLength;
+        scaleWaveform(input, inputSize, thiz.volume);
+        thiz.bufferQueueSend += thiz.bufferQueue.Scatter(thiz.bufferQueueSend, input, inputSize);
+
+        waveInAddBuffer(hWaveIn, hdr, sizeof(WAVEHDR));
+        break;
+    }
+    case WIM_CLOSE:
+        waveInStop(hWaveIn);
+        waveInReset(hWaveIn);
+        waveInClose(hWaveIn);
+        break;
+    default:
+        break;
+    }
+
+    return 0;
+}
+//------------------------------------------------------------------------------
 struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer, bool record)
 {
     WWaveOut* waveOut = nullptr;
@@ -132,8 +167,16 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         thiz.waveFormat.wFormatTag = WAVE_FORMAT_PCM;
         thiz.waveFormat.nBlockAlign = (thiz.waveFormat.wBitsPerSample * thiz.waveFormat.nChannels) >> 3;
         thiz.waveFormat.nAvgBytesPerSec = thiz.waveFormat.nBlockAlign * thiz.waveFormat.nSamplesPerSec;
-        if (waveOutOpen(nullptr, WAVE_MAPPER, &thiz.waveFormat, 0, 0, WAVE_FORMAT_QUERY) != MMSYSERR_NOERROR)
-            break;
+        if (record)
+        {
+            if (waveInOpen(nullptr, WAVE_MAPPER, &thiz.waveFormat, 0, 0, WAVE_FORMAT_QUERY) != MMSYSERR_NOERROR)
+                break;
+        }
+        else
+        {
+            if (waveOutOpen(nullptr, WAVE_MAPPER, &thiz.waveFormat, 0, 0, WAVE_FORMAT_QUERY) != MMSYSERR_NOERROR)
+                break;
+        }
 
         thiz.semaphore = CreateSemaphoreA(nullptr, 0, LONG_MAX, nullptr);
         if (thiz.semaphore == nullptr)
@@ -142,7 +185,7 @@ struct WWaveOut* WWaveOutCreate(int channel, int sampleRate, int secondPerBuffer
         thiz.channel = channel;
         thiz.sampleRate = sampleRate;
         thiz.bytesPerSecond = sampleRate * sizeof(int16_t) * channel;
-        thiz.volume = 0.0f;
+        thiz.volume = record ? 1.0f : 0.0f;
         thiz.record = record;
 
         return waveOut;
@@ -180,6 +223,8 @@ uint64_t WWaveOutQueue(struct WWaveOut* waveOut, uint64_t now, uint64_t timestam
         return 0;
     WWaveOut& thiz = (*waveOut);
     if (bufferSize == 0)
+        return 0;
+    if (thiz.record)
         return 0;
 
     if (thiz.ready)
@@ -237,6 +282,26 @@ size_t WWaveOutDequeue(struct WWaveOut* waveOut, void* buffer, size_t bufferSize
     if (thiz.ready == false)
     {
         thiz.ready = true;
+
+        waveInOpen(&thiz.waveIn, WAVE_MAPPER, &thiz.waveFormat, (DWORD_PTR)WWaveInCallback, (DWORD_PTR)&thiz, CALLBACK_FUNCTION);
+        if (thiz.waveIn == nullptr || thiz.waveIn == INVALID_HANDLE_VALUE)
+            return 0;
+
+        thiz.waveHeader[0] = {};
+        thiz.waveHeader[0].lpData = (LPSTR)&thiz.temp[0];
+        thiz.waveHeader[0].dwBufferLength = bufferSize;
+        thiz.waveHeader[0].dwLoops = TRUE;
+
+        thiz.waveHeader[1] = {};
+        thiz.waveHeader[1].lpData = (LPSTR)&thiz.temp[bufferSize];
+        thiz.waveHeader[1].dwBufferLength = bufferSize;
+        thiz.waveHeader[1].dwLoops = TRUE;
+
+        waveInPrepareHeader(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
+        waveInPrepareHeader(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
+        waveInAddBuffer(thiz.waveIn, &thiz.waveHeader[0], sizeof(WAVEHDR));
+        waveInAddBuffer(thiz.waveIn, &thiz.waveHeader[1], sizeof(WAVEHDR));
+        waveInStart(thiz.waveIn);
     }
 
     if (drop)

@@ -118,7 +118,7 @@ struct AOpenSLES
     bool record;
 
     int bufferSize;
-    short temp[4096];
+    short temp[8192];
 };
 //------------------------------------------------------------------------------
 static void playerCallback(SLAndroidSimpleBufferQueueItf, void* context)
@@ -295,7 +295,7 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
         thiz.channel = channel;
         thiz.sampleRate = sampleRate;
         thiz.bytesPerSecond = sampleRate * sizeof(int16_t) * channel;
-        thiz.volume = 0.0f;
+        thiz.volume = record ? 1.0f : 0.0f;
         thiz.record = record;
 
         return openSLES;
