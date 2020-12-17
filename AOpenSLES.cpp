@@ -54,10 +54,7 @@ static bool AOpenSLESInitialize()
     return  AOpenSLESCreateEngine != nullptr &&
             AOpenSLESQueryNumSupportedEngineInterfaces != nullptr &&
             AOpenSLESQuerySupportedEngineInterfaces != nullptr &&
-            AOpenSLES_SL_IID_ANDROIDACOUSTICECHOCANCELLATION != nullptr &&
-            AOpenSLES_SL_IID_ANDROIDAUTOMATICGAINCONTROL != nullptr &&
             AOpenSLES_SL_IID_ANDROIDCONFIGURATION != nullptr &&
-            AOpenSLES_SL_IID_ANDROIDNOISESUPPRESSION != nullptr &&
             AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE != nullptr &&
             AOpenSLES_SL_IID_PLAY != nullptr &&
             AOpenSLES_SL_IID_ENGINE != nullptr &&
@@ -238,12 +235,18 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
                 break;
             if ((*thiz.recorderObject)->Realize(thiz.recorderObject, SL_BOOLEAN_FALSE) != SL_RESULT_SUCCESS)
                 break;
-            (*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDACOUSTICECHOCANCELLATION, &thiz.recorderAEC);
-            (*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDAUTOMATICGAINCONTROL, &thiz.recorderAGC);
-            (*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDNOISESUPPRESSION, &thiz.recorderNS);
-            thiz.recorderAEC ? (*thiz.recorderAEC)->SetEnabled(thiz.recorderAEC, SL_BOOLEAN_TRUE) : 0;
-            thiz.recorderAGC ? (*thiz.recorderAGC)->SetEnabled(thiz.recorderAGC, SL_BOOLEAN_TRUE) : 0;
-            thiz.recorderNS ? (*thiz.recorderNS)->SetEnabled(thiz.recorderNS, SL_BOOLEAN_TRUE) : 0;
+            if (AOpenSLES_SL_IID_ANDROIDACOUSTICECHOCANCELLATION)
+                (*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDACOUSTICECHOCANCELLATION, &thiz.recorderAEC);
+            if (AOpenSLES_SL_IID_ANDROIDAUTOMATICGAINCONTROL)
+                (*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDAUTOMATICGAINCONTROL, &thiz.recorderAGC);
+            if (AOpenSLES_SL_IID_ANDROIDNOISESUPPRESSION)
+                (*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDNOISESUPPRESSION, &thiz.recorderNS);
+            if (thiz.recorderAEC)
+                (*thiz.recorderAEC)->SetEnabled(thiz.recorderAEC, SL_BOOLEAN_TRUE);
+            if (thiz.recorderAGC)
+                (*thiz.recorderAGC)->SetEnabled(thiz.recorderAGC, SL_BOOLEAN_TRUE);
+            if (thiz.recorderNS)
+                (*thiz.recorderNS)->SetEnabled(thiz.recorderNS, SL_BOOLEAN_TRUE);
             if ((*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE, (void*)&thiz.recorderBufferQueue) != SL_RESULT_SUCCESS)
                 break;
             if ((*thiz.recorderObject)->GetInterface(thiz.recorderObject, AOpenSLES_SL_IID_RECORD, (void*)&thiz.recorderRecord) != SL_RESULT_SUCCESS)
