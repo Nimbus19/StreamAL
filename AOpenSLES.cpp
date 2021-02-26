@@ -48,8 +48,6 @@ static bool AOpenSLESInitialize()
         memcpy(&AOpenSLES_SL_IID_PLAY, pointer, sizeof(SLInterfaceID));
     if (void* pointer = dlsym(so, "SL_IID_RECORD"))
         memcpy(&AOpenSLES_SL_IID_RECORD, pointer, sizeof(SLInterfaceID));
-    if (void* pointer = dlsym(so, "SL_IID_VOLUME"))
-        memcpy(&AOpenSLES_SL_IID_VOLUME, pointer, sizeof(SLInterfaceID));
 
     return  AOpenSLESCreateEngine != nullptr &&
             AOpenSLESQueryNumSupportedEngineInterfaces != nullptr &&
@@ -58,8 +56,7 @@ static bool AOpenSLESInitialize()
             AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE != nullptr &&
             AOpenSLES_SL_IID_PLAY != nullptr &&
             AOpenSLES_SL_IID_ENGINE != nullptr &&
-            AOpenSLES_SL_IID_RECORD != nullptr &&
-            AOpenSLES_SL_IID_VOLUME != nullptr;
+            AOpenSLES_SL_IID_RECORD != nullptr;
 }
 //------------------------------------------------------------------------------
 bool AOpenSLESAvailable = AOpenSLESInitialize();
@@ -74,7 +71,6 @@ SLInterfaceID AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE;
 SLInterfaceID AOpenSLES_SL_IID_PLAY;
 SLInterfaceID AOpenSLES_SL_IID_ENGINE;
 SLInterfaceID AOpenSLES_SL_IID_RECORD;
-SLInterfaceID AOpenSLES_SL_IID_VOLUME;
 //==============================================================================
 // OpenSL ES Utility
 //==============================================================================
@@ -87,7 +83,6 @@ struct AOpenSLES
     SLObjectItf playerObject;
     SLPlayItf playerPlay;
     SLAndroidSimpleBufferQueueItf playerBufferQueue;
-    SLVolumeItf playerVolume;
 
     SLObjectItf recorderObject;
     SLRecordItf recorderRecord;
@@ -276,18 +271,22 @@ struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuff
             SLDataLocator_OutputMix locMix = { SL_DATALOCATOR_OUTPUTMIX, thiz.outputMixObject };
             SLDataSource audioSource = { &locatorQueue, &formatPCM };
             SLDataSink audioSink = { &locMix, nullptr };
-            SLInterfaceID ids[2] = { AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE, AOpenSLES_SL_IID_VOLUME };
-            SLboolean req[2] = { SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE };
+            SLInterfaceID ids[1] =
+            {
+                AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE
+            };
+            SLboolean req[1] =
+            {
+                SL_BOOLEAN_TRUE
+            };
 
-            if ((*thiz.engineEngine)->CreateAudioPlayer(thiz.engineEngine, &thiz.playerObject, &audioSource, &audioSink, 2, ids, req) != SL_RESULT_SUCCESS)
+            if ((*thiz.engineEngine)->CreateAudioPlayer(thiz.engineEngine, &thiz.playerObject, &audioSource, &audioSink, 1, ids, req) != SL_RESULT_SUCCESS)
                 break;
             if ((*thiz.playerObject)->Realize(thiz.playerObject, SL_BOOLEAN_FALSE) != SL_RESULT_SUCCESS)
                 break;
             if ((*thiz.playerObject)->GetInterface(thiz.playerObject, AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &thiz.playerBufferQueue) != SL_RESULT_SUCCESS)
                 break;
             if ((*thiz.playerObject)->GetInterface(thiz.playerObject, AOpenSLES_SL_IID_PLAY, &thiz.playerPlay) != SL_RESULT_SUCCESS)
-                break;
-            if ((*thiz.playerObject)->GetInterface(thiz.playerObject, AOpenSLES_SL_IID_VOLUME, &thiz.playerVolume) != SL_RESULT_SUCCESS)
                 break;
             if ((*thiz.playerBufferQueue)->RegisterCallback(thiz.playerBufferQueue, playerCallback, openSLES) != SL_RESULT_SUCCESS)
                 break;
@@ -350,6 +349,7 @@ uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t times
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
         thiz.bufferQueuePickAdjust = adjust;
 
+        (*thiz.playerPlay)->SetPlayState(thiz.playerPlay, SL_PLAYSTATE_PLAYING);
         (*thiz.playerBufferQueue)->Enqueue(thiz.playerBufferQueue, thiz.temp, sizeof(short) * thiz.channel);
     }
     else
@@ -372,6 +372,7 @@ size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferS
     {
         thiz.ready = true;
 
+        (*thiz.recorderRecord)->SetRecordState(thiz.recorderRecord, SL_RECORDSTATE_RECORDING);
         (*thiz.recorderBufferQueue)->Enqueue(thiz.recorderBufferQueue, thiz.temp, sizeof(short) * thiz.channel);
     }
 
@@ -392,54 +393,6 @@ size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferS
     return bufferSize;
 }
 //------------------------------------------------------------------------------
-void AOpenSLESPlay(struct AOpenSLES* openSLES)
-{
-    if (openSLES == nullptr)
-        return;
-    AOpenSLES& thiz = (*openSLES);
-
-    if (thiz.record)
-    {
-        (*thiz.recorderRecord)->SetRecordState(thiz.recorderRecord, SL_RECORDSTATE_RECORDING);
-    }
-    else
-    {
-        (*thiz.playerPlay)->SetPlayState(thiz.playerPlay, SL_PLAYSTATE_PLAYING);
-    }
-}
-//------------------------------------------------------------------------------
-void AOpenSLESStop(struct AOpenSLES* openSLES)
-{
-    if (openSLES == nullptr)
-        return;
-    AOpenSLES& thiz = (*openSLES);
-
-    if (thiz.record)
-    {
-        (*thiz.recorderRecord)->SetRecordState(thiz.recorderRecord, SL_RECORDSTATE_STOPPED);
-    }
-    else
-    {
-        (*thiz.playerPlay)->SetPlayState(thiz.playerPlay, SL_PLAYSTATE_STOPPED);
-    }
-}
-//------------------------------------------------------------------------------
-void AOpenSLESPause(struct AOpenSLES* openSLES)
-{
-    if (openSLES == nullptr)
-        return;
-    AOpenSLES& thiz = (*openSLES);
-
-    if (thiz.record)
-    {
-        (*thiz.recorderRecord)->SetRecordState(thiz.recorderRecord, SL_RECORDSTATE_PAUSED);
-    }
-    else
-    {
-        (*thiz.playerPlay)->SetPlayState(thiz.playerPlay, SL_PLAYSTATE_PAUSED);
-    }
-}
-//------------------------------------------------------------------------------
 void AOpenSLESReset(struct AOpenSLES* openSLES)
 {
     if (openSLES == nullptr)
@@ -449,6 +402,8 @@ void AOpenSLESReset(struct AOpenSLES* openSLES)
     if (thiz.record)
     {
         (*thiz.recorderRecord)->SetRecordState(thiz.recorderRecord, SL_RECORDSTATE_STOPPED);
+        thiz.ready = false;
+        thiz.go = false;
     }
     else
     {
@@ -488,7 +443,6 @@ void AOpenSLESDestroy(struct AOpenSLES* openSLES)
         thiz.playerObject = nullptr;
         thiz.playerPlay = nullptr;
         thiz.playerBufferQueue = nullptr;
-        thiz.playerVolume = nullptr;
     }
 
     if (thiz.recorderObject != nullptr)

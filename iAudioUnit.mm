@@ -419,54 +419,6 @@ size_t iAudioUnitDequeue(struct iAudioUnit* audioUnit, void* buffer, size_t buff
     return bufferSize;
 }
 //------------------------------------------------------------------------------
-void iAudioUnitPlay(struct iAudioUnit* audioUnit)
-{
-    if (audioUnit == nullptr)
-        return;
-    iAudioUnit& thiz = (*audioUnit);
-
-    if (thiz.record)
-    {
-
-    }
-    else
-    {
-        AudioOutputUnitStart(thiz.instance);
-    }
-}
-//------------------------------------------------------------------------------
-void iAudioUnitStop(struct iAudioUnit* audioUnit)
-{
-    if (audioUnit == nullptr)
-        return;
-    iAudioUnit& thiz = (*audioUnit);
-
-    if (thiz.record)
-    {
-
-    }
-    else
-    {
-        AudioOutputUnitStop(thiz.instance);
-    }
-}
-//------------------------------------------------------------------------------
-void iAudioUnitPause(struct iAudioUnit* audioUnit)
-{
-    if (audioUnit == nullptr)
-        return;
-    iAudioUnit& thiz = (*audioUnit);
-
-    if (thiz.record)
-    {
-
-    }
-    else
-    {
-        AudioOutputUnitStop(thiz.instance);
-    }
-}
-//------------------------------------------------------------------------------
 void iAudioUnitReset(struct iAudioUnit* audioUnit)
 {
     if (audioUnit == nullptr)
@@ -475,7 +427,9 @@ void iAudioUnitReset(struct iAudioUnit* audioUnit)
 
     if (thiz.record)
     {
-
+        AudioOutputUnitStop(thiz.instance);
+        thiz.ready = false;
+        thiz.go = false;
     }
     else
     {

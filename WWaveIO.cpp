@@ -243,29 +243,6 @@ struct WWaveIO* WWaveIOCreate(int channel, int sampleRate, int secondPerBuffer, 
     return nullptr;
 }
 //------------------------------------------------------------------------------
-void WWaveIODestroy(struct WWaveIO* waveOut)
-{
-    if (waveOut == nullptr)
-        return;
-    WWaveIO& thiz = (*waveOut);
-
-    thiz.cancel = true;
-
-    if (thiz.thread)
-    {
-        ReleaseSemaphore(thiz.semaphore, 1, nullptr);
-        WaitForSingleObject(thiz.thread, INFINITE);
-        CloseHandle(thiz.thread);
-    }
-    else
-    {
-        WWaveInThread(&thiz);
-        WWaveOutThread(&thiz);
-    }
-
-    delete& thiz;
-}
-//------------------------------------------------------------------------------
 uint64_t WWaveIOQueue(struct WWaveIO* waveOut, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap)
 {
     if (waveOut == nullptr)
@@ -356,41 +333,22 @@ size_t WWaveIODequeue(struct WWaveIO* waveOut, void* buffer, size_t bufferSize, 
     return bufferSize;
 }
 //------------------------------------------------------------------------------
-void WWaveIOPlay(struct WWaveIO* waveOut)
-{
-    if (waveOut == nullptr)
-        return;
-    WWaveIO& thiz = (*waveOut);
-
-    thiz.go = true;
-}
-//------------------------------------------------------------------------------
-void WWaveIOStop(struct WWaveIO* waveOut)
-{
-    if (waveOut == nullptr)
-        return;
-    WWaveIO& thiz = (*waveOut);
-
-    thiz.go = false;
-}
-//------------------------------------------------------------------------------
-void WWaveIOPause(struct WWaveIO* waveOut)
-{
-    if (waveOut == nullptr)
-        return;
-    WWaveIO& thiz = (*waveOut);
-
-    thiz.go = false;
-}
-//------------------------------------------------------------------------------
 void WWaveIOReset(struct WWaveIO* waveOut)
 {
     if (waveOut == nullptr)
         return;
     WWaveIO& thiz = (*waveOut);
 
-    thiz.ready = false;
-    thiz.go = false;
+    if (thiz.record)
+    {
+        thiz.ready = false;
+        thiz.go = false;
+    }
+    else
+    {
+        thiz.ready = false;
+        thiz.go = false;
+    }
 }
 //------------------------------------------------------------------------------
 void WWaveIOVolume(struct WWaveIO* waveOut, float volume)
@@ -399,6 +357,36 @@ void WWaveIOVolume(struct WWaveIO* waveOut, float volume)
         return;
     WWaveIO& thiz = (*waveOut);
 
-    thiz.volume = volume;
+    if (thiz.record)
+    {
+        thiz.volume = volume;
+    }
+    else
+    {
+        thiz.volume = volume;
+    }
+}
+//------------------------------------------------------------------------------
+void WWaveIODestroy(struct WWaveIO* waveOut)
+{
+    if (waveOut == nullptr)
+        return;
+    WWaveIO& thiz = (*waveOut);
+
+    thiz.cancel = true;
+
+    if (thiz.thread)
+    {
+        ReleaseSemaphore(thiz.semaphore, 1, nullptr);
+        WaitForSingleObject(thiz.thread, INFINITE);
+        CloseHandle(thiz.thread);
+    }
+    else
+    {
+        WWaveInThread(&thiz);
+        WWaveOutThread(&thiz);
+    }
+
+    delete& thiz;
 }
 //------------------------------------------------------------------------------

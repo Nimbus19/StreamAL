@@ -29,16 +29,12 @@ STREAMAL_EXPORT extern SLInterfaceID AOpenSLES_SL_IID_ANDROIDSIMPLEBUFFERQUEUE;
 STREAMAL_EXPORT extern SLInterfaceID AOpenSLES_SL_IID_ENGINE;
 STREAMAL_EXPORT extern SLInterfaceID AOpenSLES_SL_IID_PLAY;
 STREAMAL_EXPORT extern SLInterfaceID AOpenSLES_SL_IID_RECORD;
-STREAMAL_EXPORT extern SLInterfaceID AOpenSLES_SL_IID_VOLUME;
 //==============================================================================
 // OpenSL ES Utility
 //==============================================================================
 STREAMAL_EXPORT struct AOpenSLES* AOpenSLESCreate(int channel, int sampleRate, int secondPerBuffer, bool record = false);
 STREAMAL_EXPORT uint64_t AOpenSLESQueue(struct AOpenSLES* openSLES, uint64_t now, uint64_t timestamp, int64_t adjust, const void* buffer, size_t bufferSize, int gap);
 STREAMAL_EXPORT size_t AOpenSLESDequeue(struct AOpenSLES* openSLES, void* buffer, size_t bufferSize, bool drop = false);
-STREAMAL_EXPORT void AOpenSLESPlay(struct AOpenSLES* openSLES);
-STREAMAL_EXPORT void AOpenSLESStop(struct AOpenSLES* openSLES);
-STREAMAL_EXPORT void AOpenSLESPause(struct AOpenSLES* openSLES);
 STREAMAL_EXPORT void AOpenSLESReset(struct AOpenSLES* openSLES);
 STREAMAL_EXPORT void AOpenSLESVolume(struct AOpenSLES* openSLES, float volume);
 STREAMAL_EXPORT void AOpenSLESDestroy(struct AOpenSLES* openSLES);
