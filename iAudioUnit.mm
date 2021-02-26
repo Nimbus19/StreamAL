@@ -377,8 +377,7 @@ uint64_t iAudioUnitQueue(struct iAudioUnit* audioUnit, uint64_t now, uint64_t ti
         thiz.bufferQueuePick = thiz.bufferQueuePick - (thiz.bufferQueuePick % bufferSize);
         thiz.bufferQueuePickAdjust = adjust;
 
-        if (thiz.instance)
-            AudioOutputUnitStart(thiz.instance);
+        AudioOutputUnitStart(thiz.instance);
     }
     else
     {
