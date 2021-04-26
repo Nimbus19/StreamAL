@@ -9,6 +9,7 @@
 #elif defined(_M_IX86) || defined(_M_AMD64) || defined(__i386__) || defined(__amd64__)
 #   include <immintrin.h>
 #endif
+#include <math.h>
 #include <limits.h>
 #include <string.h>
 #include "Waveform.h"
