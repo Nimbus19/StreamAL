@@ -241,9 +241,6 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
                                      sizeof(playerCallbackStruct)) != noErr)
                 break;
 
-            AudioUnitInitialize(thiz.instance);
-            AudioOutputUnitStart(thiz.instance);
-
 #if TARGET_OS_IPHONE
             [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord
                                              withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
@@ -253,6 +250,9 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
             [[AVAudioSession sharedInstance] setInputGain:1.0
                                                     error:nil];
 #endif
+
+            AudioUnitInitialize(thiz.instance);
+            AudioOutputUnitStart(thiz.instance);
         }
         else
         {
@@ -309,9 +309,6 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
                                      sizeof(callbackStruct)) != noErr)
                 break;
 
-            AudioUnitInitialize(thiz.instance);
-            AudioOutputUnitStart(thiz.instance);
-
 #if TARGET_OS_IPHONE
             [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
                                                    error:nil];
@@ -320,6 +317,9 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
             [[AVAudioSession sharedInstance] setActive:YES
                                                  error:nil];
 #endif
+
+            AudioUnitInitialize(thiz.instance);
+            AudioOutputUnitStart(thiz.instance);
         }
 
         thiz.channel = channel;
