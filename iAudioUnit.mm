@@ -245,7 +245,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
             [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord
                                              withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
                                                    error:nil];
-            [[AVAudioSession sharedInstance] setMode:AVAudioSessionModeVoiceChat
+            [[AVAudioSession sharedInstance] setMode:AVAudioSessionModeVideoChat
                                                error:nil];
             [[AVAudioSession sharedInstance] setInputGain:1.0
                                                     error:nil];
@@ -259,7 +259,7 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
             AudioComponentDescription desc = {};
             desc.componentType = kAudioUnitType_Output;
 #if TARGET_OS_IPHONE
-            desc.componentSubType = kAudioUnitSubType_RemoteIO;
+            desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
 #else
             desc.componentSubType = kAudioUnitSubType_DefaultOutput;
 #endif
@@ -310,10 +310,14 @@ struct iAudioUnit* iAudioUnitCreate(int channel, int sampleRate, int secondPerBu
                 break;
 
 #if TARGET_OS_IPHONE
-            [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
-                                                   error:nil];
-            [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker
-                                                               error:nil];
+            AVAudioSessionCategory currentCategory = [[AVAudioSession sharedInstance] category];
+
+            if (![currentCategory containsString:@"AVAudioSessionCategoryPlay"])
+            {
+                [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
+                                                       error:nil];
+            }
+
             [[AVAudioSession sharedInstance] setActive:YES
                                                  error:nil];
 #endif
